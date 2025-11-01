@@ -20,7 +20,7 @@ async def favicon():
 
 # Gooogle Earth Engine platform
 ee.Authenticate()
-ee.Initialize(project='mythical-lens-123220')
+# ee.Initialize(project="")
 print(ee.String('Hello from the Earth Engine servers!').getInfo())
 
 
@@ -72,7 +72,7 @@ task = ee.batch.Export.table.toDrive(
 
  
 # Nasa FIRMS API
-key = "a3f61f815222e01d3ae549883aff04f1"
+#key = ""
 sources = {
     "Landsat": f"https://firms.modaps.eosdis.nasa.gov/usfs/api/area/csv/{key}/LANDSAT_NRT/world/1/2025-10-13",
     "Modis" : f"https://firms.modaps.eosdis.nasa.gov/usfs/api/area/csv/{key}/MODIS_NRT/world/1/2025-10-13"
