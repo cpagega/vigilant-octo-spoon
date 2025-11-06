@@ -1,0 +1,3 @@
+DB_NAME = "dataset.db"
+START_DATE = "01-01-2000"
+END_DATE = "12-31-2000"
