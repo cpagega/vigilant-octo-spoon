@@ -43,6 +43,18 @@ class Collector():
 
 if (__name__ == "__main__"):
     collector = Collector()
-
-    #We can add input to pick which set to collect
-    collector.collect_DaymetV4()
+    functions = [collector.collect_FIRMS, collector.collect_CONUS, collector.collect_CFSR,  
+                 collector.collect_DaymetV4, collector.collect_CPC_Precipitation, collector.collect_all]
+    
+    choice = int(input("" +
+    "1) FIRMS\n" +
+    "2) CONUS\n" +
+    "3) CFSR\n" +
+    "4) DaymetV4\n" +
+    "5) CPC Preciptitation\n" +
+    "6) All\n" +
+    "Enter Database to Collect: "
+    ))
+    
+    
+    functions[choice - 1]()
