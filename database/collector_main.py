@@ -1,14 +1,15 @@
 import ee
 import os
 from dotenv import load_dotenv
-from collectors.FIRMS_builder import FIRMS_Builder
-from collectors.CONUS_builder import CONUS_Builder
+from collectors.FIRMS_collector import FIRMSCollector
+from collectors.CONUS_collector import CONUSCollector
+from collectors.CFSR_collector import CFSRCollector
+from collectors.DaymetV4_collector import DaymetV4Collector
 
 class Collector():
     def __init__(self):
         load_dotenv()
         ee.Authenticate()
-        print(f"Project Name: {os.getenv('EE_PROJECT')}")
         ee.Initialize(project=os.getenv("EE_PROJECT"))
         print("Google Earth Engine initialized successfully!")
 
@@ -20,18 +21,20 @@ class Collector():
         self.collect_CPC_Precipitation
 
     def collect_FIRMS(self):
-        fb =  FIRMS_Builder()
-        fb.collect_data()
+        fc =  FIRMSCollector()
+        fc.collect_data()
 
     def collect_CONUS(self):
-        cb = CONUS_Builder()
-        cb.collect_data()
+        cc = CONUSCollector()
+        cc.collect_data()
 
     def collect_CFSR(self):
-        pass
+        cc = CFSRCollector()
+        cc.collect_data()
 
     def collect_DaymetV4(self):
-        pass
+        d4 = DaymetV4Collector()
+        d4.collect_data()
 
     def collect_CPC_Precipitation(self):
         pass
@@ -42,4 +45,4 @@ if (__name__ == "__main__"):
     collector = Collector()
 
     #We can add input to pick which set to collect
-    collector.collect_CONUS()
+    collector.collect_DaymetV4()

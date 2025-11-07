@@ -1,11 +1,10 @@
-from collectors.table_builder import TableBuilder
-import Constants
+from collectors.table_collector import TableCollector
+import constants
 import ee
-import os
 
-class FIRMS_Builder(TableBuilder) :
+class CPCCollector(TableCollector) :
     def __init__(self):
-        super().__init__("FIRMS", "FIRMS")
+        super().__init__("CPC", "NOAA/CPC/Precipitation")
 
 
     def create_table(self):
@@ -17,10 +16,11 @@ class FIRMS_Builder(TableBuilder) :
                 confidence int,
                 brightness real,
                 frp real,
+                
                 PRIMARY KEY (date, lat, long)
             );
         """)
 
     def collect_data(self):
-        raise NotImplementedError("FIRMS collection needs implemented")
-        #firms = ee.ImageCollection(self.ee_name).filterDate(Constants.START_DATE, Constants.END_DATE)
+        raise NotImplementedError("CPC collection needs implemented")
+        cpc = ee.ImageCollection(self.ee_name).filterDate(constants.START_DATE, constants.END_DATE)

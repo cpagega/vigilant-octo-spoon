@@ -1,7 +1,7 @@
 import sqlite3
-import Constants
+import constants
 
-class TableBuilder:
+class TableCollector:
     def __init__(self, table_name : str, ee_name : str):
         self.table_name = table_name
         self.ee_name = ee_name
@@ -14,7 +14,7 @@ class TableBuilder:
         self.cursor.close()
 
     def build_cursor(self) -> sqlite3.Cursor:
-        conn = sqlite3.connect(Constants.DB_NAME)
+        conn = sqlite3.connect(constants.DB_NAME)
         return conn.cursor()
     
     def does_table_exist(self) -> bool:

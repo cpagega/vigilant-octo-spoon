@@ -1,9 +1,8 @@
-from collectors.table_builder import TableBuilder
-import Constants
+from collectors.table_collector import TableCollector
+import constants
 import ee
-import os
 
-class CONUS_Builder(TableBuilder) :
+class CONUSCollector(TableCollector) :
     def __init__(self):
         super().__init__("CONUS", "GRIDMET/DROUGHT")
 
@@ -20,7 +19,7 @@ class CONUS_Builder(TableBuilder) :
         """)
 
     def collect_data(self):
-        conus = ee.ImageCollection(self.ee_name).filterDate(Constants.START_DATE, Constants.END_DATE).select('pdsi')
+        conus = ee.ImageCollection(self.ee_name).filterDate(constants.START_DATE, constants.END_DATE).select('pdsi')
         info_list = conus.aggregate_array('system:index').getInfo()
 
         for i, image_id in enumerate(info_list):
