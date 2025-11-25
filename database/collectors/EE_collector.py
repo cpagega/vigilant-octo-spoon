@@ -1,5 +1,6 @@
 import ee
-
+import os
+from dotenv import load_dotenv
 class EECollector() :
     def __init__(self):
         self.cfsr = None
@@ -7,10 +8,11 @@ class EECollector() :
         self.cpc_precip = None
         self.cpc_temp = None
         self.fc = None
+        load_dotenv()
 
     def create_firms_featurecollection(self):
         """ Converts a CSV to a feature collection while preserving lat/long as properties"""
-        firms = ee.FeatureCollection(f"projects/mythical-lens-123220/assets/firms_sample_sorted")
+        firms = ee.FeatureCollection(f"projects/{os.getenv("EE_PROJECT")}/assets/firms_sample_sorted")
         def add_lat_lon(feat):
             coords = feat.geometry().coordinates()
             return (feat
