@@ -1,11 +1,10 @@
 from collectors.table_collector import TableCollector
-import Constants
 import csv
-import ee
 
 class FIRMSCollector(TableCollector) :
 
     def __init__(self):
+        self.sample_size = 200000
         super().__init__("FIRMS", "FIRMS")
 
     def create_table(self):
@@ -25,6 +24,16 @@ class FIRMSCollector(TableCollector) :
     def _format_time(self, date, time):
         time = time.zfill(4)
         return f"{date}T{time[0:2]}:{time[2:]}:00"
+    
+
+    def create_sample_table(self):
+        self.cursor.execute(f"""
+            CREATE TABLE FIRMS_SAMPLE AS
+                SELECT * 
+                FROM FIRMS
+                ORDER BY RANDOM()
+                LIMIT {self.sample_size};
+                            """)
     
     def _process_csv(self, reader):
         print("Populating FIRMS table...")
@@ -50,4 +59,7 @@ class FIRMSCollector(TableCollector) :
             reader = csv.DictReader(f)
             self._process_csv(reader)
         self.conn.commit()
+        print(f"Creating table of random FIRMS data. Size: {self.sample_size}")
+        self.create_sample_table()
+        print("Sample table creation complete")
 
