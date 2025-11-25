@@ -1,6 +1,5 @@
-from collectors.table_collector import TableCollector
 import csv
-
+from collectors.table_collector import TableCollector
 class FIRMSCollector(TableCollector) :
 
     def __init__(self):
