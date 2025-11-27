@@ -25,7 +25,7 @@ class FIRMSCollector(TableCollector) :
         return f"{date}T{time[0:2]}:{time[2:]}:00"
     
 
-    def create_sample_table(self):
+    def _create_sample_table(self):
         self.cursor.execute(f"""
             CREATE TABLE FIRMS_SAMPLE AS
                 SELECT * 
@@ -59,6 +59,6 @@ class FIRMSCollector(TableCollector) :
             self._process_csv(reader)
         self.conn.commit()
         print(f"Creating table of random FIRMS data. Size: {self.sample_size}")
-        self.create_sample_table()
+        self._create_sample_table()
         print("Sample table creation complete")
 

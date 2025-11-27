@@ -2,36 +2,32 @@ import ee
 import os
 from dotenv import load_dotenv
 from collectors.FIRMS_collector import FIRMSCollector
-from database.collectors.EE_collector import EECollector
+from collectors.EE_collector import EECollector
 
 class Collector():
     def __init__(self):
         load_dotenv()
+        self.project_id = os.getenv("EE_PROJECT")
         ee.Authenticate()
-        ee.Initialize(project=os.getenv("EE_PROJECT"))
+        ee.Initialize(project=self.project_id)
         print("Google Earth Engine initialized successfully!")
-
-    def collect_all(self):
-        self.collect_FIRMS()
-        self.collect_EE()
 
     def collect_FIRMS(self):
         fc =  FIRMSCollector()
         fc.collect_data()
 
     def collect_EE(self):
-        cfc = EECollector()
+        cfc = EECollector(self.project_id)
         cfc.collect_data()
-
+2
 
 if (__name__ == "__main__"):
     collector = Collector()
-    functions = [collector.collect_FIRMS, collector.collect_EE, collector.collect_all]
+    functions = [collector.collect_FIRMS, collector.collect_EE]
     
     choice = int(input("" +
     "1) FIRMS\n" +
-    "2) EE Data"
-    "3) All\n" +
+    "2) EE Data\n"
     "Enter Database to Collect: "
     ))
     functions[choice - 1]()

@@ -1,18 +1,17 @@
 import ee
-import os
-from dotenv import load_dotenv
+
 class EECollector() :
-    def __init__(self):
+    def __init__(self, project_id):
         self.cfsr = None
-        self.conus = None
+        self.gridmet = None
         self.cpc_precip = None
         self.cpc_temp = None
         self.fc = None
-        load_dotenv()
+        self.project_id = project_id
 
-    def create_firms_featurecollection(self):
+    def _create_firms_featurecollection(self):
         """ Converts a CSV to a feature collection while preserving lat/long as properties"""
-        firms = ee.FeatureCollection(f"projects/{os.getenv("EE_PROJECT")}/assets/firms_sample_sorted")
+        firms = ee.FeatureCollection(f"projects/{self.project_id}/assets/firms_sample_sorted")
         def add_lat_lon(feat):
             coords = feat.geometry().coordinates()
             return (feat
@@ -20,7 +19,7 @@ class EECollector() :
                     .set('lat', coords.get(1)))
         self.fc = firms.map(add_lat_lon)
 
-    def set_image_collections(self):
+    def _set_image_collections(self):
         """ Sets the image collection properties"""
         self.cfsr = (
             ee.ImageCollection("NOAA/CFSR")
@@ -34,7 +33,7 @@ class EECollector() :
                      ])        
             )
         
-        self.conus = (
+        self.gridmet = (
             ee.ImageCollection("GRIDMET/DROUGHT")
             .select(['pdsi'])
         )
@@ -46,39 +45,77 @@ class EECollector() :
             ee.ImageCollection("NOAA/CPC/Temperature")
             .select(['tmax','tmin'])
         )
-    
-    def attach_cfsr(self, feat):
-        """ Combines the EE feature collections with the FIRMs feature collection"""
+
+    def _get_feature_values(self,feat,dataset,hours):
+        """
+            feat: existing feature collection
+            dataset: new dataset to that will be appened to feature collection
+            hours: time interval for dataset collections
+            Returns the values of the dataset for the given time interval
+        """
         t = ee.Date(feat.get("date"))
         millis = t.millis()
-        six_h = ee.Number(6 * 60 * 60 * 1000) #CFSR data is in 6 hour intervals
-        slot_millis = millis.divide(six_h).round().multiply(six_h) # round to the nearest 6 hours
+        h = ee.Number(hours * 60 * 60 * 1000) #EE Data interval in milliseconds
+        slot_millis = millis.divide(h).round().multiply(h) # round to the nearest interval
         slot = ee.Date(slot_millis)
-        img = (self.cfsr
-               .filterDate(slot, slot.advance(6, "hour")) 
+
+        # get the first image of an interval
+        img = (dataset
+               .filterDate(slot, slot.advance(hours, "hour")) 
                .sort("system:time_start")
                .first())
-        img = ee.Image(img)
+        
+        # set band names to -999999 in cases where there is no image
+        band_names = ee.Image(dataset.first()).bandNames()
+        fallback = (
+            ee.Image.constant(
+            ee.List.repeat(-9999999, band_names.size())
+            )
+            .rename(band_names)
+        )
+        # check if the image exists and use that image if it does else use the fallback
+        img = ee.Image(
+            ee.Algorithms.If(
+                img,
+                img,
+                fallback
+            )
+        )
+
+        # ensures we are only getting 1 pixel for band values
         vals = img.reduceRegion(
             reducer=ee.Reducer.first(),
             geometry=feat.geometry(),
             scale=50000,
             maxPixels=1E7,
         )
+        return vals,slot
+    
+    def _attach_cfsr(self, feat):
+        vals,slot = self._get_feature_values(feat, self.cfsr, 6)
         return (feat
                 .set("cfsr_time", slot.format("YYYY-MM-dd'T'HH:mm:ss"))
                 .setMulti(vals))
     
-    def attach_conus(self,feat):
-        raise NotImplementedError("Function 'attach_conus' Not Implemented")
+    def _attach_gridmet(self,feat):        
+        vals,slot = self._get_feature_values(feat, self.gridmet, 5 * 24)
+        return (feat
+                .set("gridmet_time", slot.format("YYYY-MM-dd'T'HH:mm:ss"))
+                .setMulti(vals))
 
-    def attach_cpc(self,feat):
-        raise NotImplementedError("Function 'attach_cpc' Not Implemented")
+    def _attach_cpc_precip(self,feat):
+        vals,slot = self._get_feature_values(feat, self.cpc_precip, 24)
+        return (feat
+                .set("cpc_precip_time", slot.format("YYYY-MM-dd'T'HH:mm:ss"))
+                .setMulti(vals))
     
-    def attach_daymet(self,feat):
-        raise NotImplementedError("Function 'attach_daymet' Not Implemented")
+    def _attach_cpc_temp(self,feat):
+        vals,slot = self._get_feature_values(feat, self.cpc_temp, 24)
+        return (feat
+                .set("cpc_temp_time", slot.format("YYYY-MM-dd'T'HH:mm:ss"))
+                .setMulti(vals))
 
-    def export_to_gdrive(self):
+    def _export_to_gdrive(self):
         """ Exports the combined feature set as a CSV to the project drive """
         task = ee.batch.Export.table.toDrive(
             collection=self.fc,
@@ -89,13 +126,13 @@ class EECollector() :
 
     def collect_data(self):
         print("Creating FIRMS collection")
-        self.create_firms_featurecollection()
+        self._create_firms_featurecollection()
         print("Setting image collections")
-        self.set_image_collections()
+        self._set_image_collections()
         print("Attaching Features to Feature Collection")
-        self.fc = self.fc.map(self.attach_cfsr)
-        #self.fc = self.fc.map(self.attach_conus)
-        #self.fc = self.fc.map(self.attach_cpc)
-        #self.fc = self.fc.map(self.attach_daymet)
+        self.fc = self.fc.map(self._attach_cfsr)
+        self.fc = self.fc.map(self._attach_gridmet)
+        self.fc = self.fc.map(self._attach_cpc_temp)
+        self.fc = self.fc.map(self._attach_cpc_precip)
         print("Exporting combined data set to project drive")
-        self.export_to_gdrive()
+        self._export_to_gdrive()
