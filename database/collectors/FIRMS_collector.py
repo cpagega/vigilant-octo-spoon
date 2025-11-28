@@ -30,6 +30,8 @@ class FIRMSCollector(TableCollector) :
             CREATE TABLE FIRMS_SAMPLE AS
                 SELECT * 
                 FROM FIRMS
+                WHERE lat  BETWEEN 25.0 AND 50.0
+                AND   long BETWEEN -125.0 AND -66.0
                 ORDER BY RANDOM()
                 LIMIT {self.sample_size};
                             """)

@@ -32,30 +32,21 @@ ee.Authenticate()
 ee.Initialize(project=ee_project)
 print(ee.String('Hello from the Earth Engine servers!').getInfo())
 
+st = ee.Date('2021-06-02T00:00:00')
 
-era5 = (ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY')
-                .select(['skin_temperature','lake_shape_factor'])
+era5 = (ee.ImageCollection('GRIDMET/DROUGHT')
+                .filterDate(st,st.advance(5, 'years'))
+                .select(['pdsi'])
 )
 
 
 first_image = era5.first()
-last_image = era5.sort('system:time_start',False).first()
+
 
 epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
-earliest_date = ee.Date(first_image.get('system:time_start'))
-latest_date = ee.Date(last_image.get('system:time_start'))
-
-earliest_date = dict(earliest_date.getInfo())
-earliest_date = epoch + timedelta(milliseconds=earliest_date['value'])
-latest_date = dict(latest_date.getInfo())
-latest_date = epoch + timedelta(milliseconds=latest_date['value'])
-
-print(f"Earliest image date: {earliest_date.isoformat()}")
-print(f"Latest image date: {latest_date.isoformat()}")
-
 # Define a small region of interest
-roi = ee.Geometry.Point([-120.0, 37.0]) 
+roi = ee.Geometry.Point([130.4584971, -12.79419989]) 
 
 
 # Sample pixel values
@@ -65,7 +56,7 @@ data_dict = dict(samples.getInfo())
 
 print(data_dict)
 print(data_dict['properties']['band_order'])
-print(data_dict['features'][0]['properties']['lake_shape_factor'])
+print(data_dict['features'][0]['properties']['pdsi'])
 print(len(data_dict['features']))
 
 

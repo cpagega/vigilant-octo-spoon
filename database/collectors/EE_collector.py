@@ -11,7 +11,7 @@ class EECollector() :
 
     def _create_firms_featurecollection(self):
         """ Converts a CSV to a feature collection while preserving lat/long as properties"""
-        firms = ee.FeatureCollection(f"projects/{self.project_id}/assets/firms_sample_sorted")
+        firms = ee.FeatureCollection(f"projects/{self.project_id}/assets/firms_sample_conus")
         def add_lat_lon(feat):
             coords = feat.geometry().coordinates()
             return (feat
@@ -64,23 +64,9 @@ class EECollector() :
                .filterDate(slot, slot.advance(hours, "hour")) 
                .sort("system:time_start")
                .first())
-        
-        # set band names to -999999 in cases where there is no image
-        band_names = ee.Image(dataset.first()).bandNames()
-        fallback = (
-            ee.Image.constant(
-            ee.List.repeat(-9999999, band_names.size())
-            )
-            .rename(band_names)
-        )
+
         # check if the image exists and use that image if it does else use the fallback
-        img = ee.Image(
-            ee.Algorithms.If(
-                img,
-                img,
-                fallback
-            )
-        )
+        img = ee.Image(img)
 
         # ensures we are only getting 1 pixel for band values
         vals = img.reduceRegion(
@@ -98,10 +84,18 @@ class EECollector() :
                 .setMulti(vals))
     
     def _attach_gridmet(self,feat):        
-        vals,slot = self._get_feature_values(feat, self.gridmet, 5 * 24)
+        vals, slot = self._get_feature_values(feat, self.gridmet, 5 * 24)
+
+        # If pdsi exists, use it; otherwise -99999
+        pdsi = ee.Algorithms.If(
+            vals.contains('pdsi'),
+            vals.get('pdsi'),
+            -99999  
+        )
+
         return (feat
-                .set("gridmet_time", slot.format("YYYY-MM-dd'T'HH:mm:ss"))
-                .setMulti(vals))
+            .set('gridmet_time', slot.format("YYYY-MM-dd'T'HH:mm:ss"))
+            .set('pdsi', pdsi))
 
     def _attach_cpc_precip(self,feat):
         vals,slot = self._get_feature_values(feat, self.cpc_precip, 24)

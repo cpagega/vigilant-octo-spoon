@@ -8,7 +8,7 @@ def export_table_csv(table_name):
     conn = sqlite3.connect("dataset.db")
     df = pd.read_sql_query(f"SELECT * FROM {table_name} ORDER BY date", conn)
     conn.close()
-    df.to_csv("firms_sample_sorted.csv", index=False)
+    df.to_csv("firms_sample_conus.csv", index=False)
 
 
 
