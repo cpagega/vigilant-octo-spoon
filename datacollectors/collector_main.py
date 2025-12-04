@@ -4,6 +4,10 @@ from dotenv import load_dotenv
 from collectors.FIRMS_collector import FIRMSCollector
 from collectors.EE_collector import EECollector
 
+"""
+@author: Tyler
+"""
+
 class Collector():
     def __init__(self):
         load_dotenv()

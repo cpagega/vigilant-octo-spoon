@@ -1,5 +1,9 @@
 import ee
 
+"""
+@author: Tyler and Chris
+"""
+
 class EECollector() :
     def __init__(self, project_id):
         self.cfsr = None

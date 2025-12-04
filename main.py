@@ -14,6 +14,10 @@ import ee
 from dotenv import load_dotenv
 import os
 
+"""
+@author: Chris
+"""
+
 load_dotenv()
 
 firms_key = os.getenv("FIRMS_KEY")

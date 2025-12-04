@@ -1,6 +1,10 @@
 import sqlite3
 import Constants
 
+"""
+@author: Tyler
+"""
+
 class TableCollector:
     def __init__(self, table_name : str, ee_name : str):
         self.table_name = table_name

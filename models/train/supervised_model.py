@@ -2,7 +2,7 @@
 """
 Created on Wed Dec  3 19:26:45 2025
 
-@author: Bosslady
+@author: Justin W.
 """
 
 import pandas as pd
@@ -13,7 +13,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 import json
 
 from tensorflow import keras
-from tensorflow.keras import layers
+
 
 # 1) Load data
 df = pd.read_csv("firms_ee_feature_join.csv")
@@ -62,11 +62,11 @@ X_test = scaler.transform(X_test)
 input_dim = X_train.shape[1]
 
 model = keras.Sequential([
-    layers.Input(shape=(input_dim,)),
-    layers.Dense(64, activation="relu"),
-    layers.Dense(32, activation="relu"),
-    layers.Dense(16, activation="relu"),
-    layers.Dense(1, activation="linear") # regression output
+    keras.layers.Input(shape=(input_dim,)),
+    keras.layers.Dense(64, activation="relu"),
+    keras.layers.Dense(32, activation="relu"),
+    keras.layers.Dense(16, activation="relu"),
+    keras.layers.Dense(1, activation="linear") # regression output
 ])
 
 model.compile(
