@@ -177,6 +177,7 @@ def build_prediction_set(lat,lon):
     prediction_set["tmin"] = tmin
     prediction_set["u-component_of_wind_hybrid"] = u
     prediction_set["v-component_of_wind_hybrid"] = v    
+    return prediction_set
 
 class PredictionResponse(BaseModel):
     prediction: float
@@ -189,6 +190,7 @@ def make_prediction(
     lon: float = Query(..., ge=-180, le=180, description="Longitude")
 ):
     pred_set =  build_prediction_set(lat,lon)
+    print(pred_set)
     result = model.make_prediction(pred_set)
     return PredictionResponse(prediction=result)
 

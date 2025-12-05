@@ -20,33 +20,44 @@
         }
     }
 
-    fetchData("/fire", (data) => {
-        console.log(data.features[0])
 
-        // handles a special json for geodata constructed on the python backend
-        L.geoJSON(data, {
-            pointToLayer: (feature, latlng) => {
-                const { frp, scan = 1, track = 1 } = feature.properties;
-
-                const dTrack = kmToLat(track);
-                const dScan = kmToLon(scan, latlng.lat);
-  
-                const bounds = [
-                    [latlng.lat - dTrack, latlng.lng - dScan],
-                    [latlng.lat + dTrack, latlng.lng + dScan]
-                ];
-
-
-                return L.rectangle(bounds, {
-                    color: "black",
-                    weight: 1,
-                    fillOpacity: 0.7,
-                    fillColor: getColor(frp)
-                });
-            },
-            onEachFeature: onEachFeature
-        }).addTo(map);
+    map.on('click', (e) =>{
+        console.log(e.latlng["lat"]);
+        console.log(e.latlng["lng"]);
+        fetchData(`/prediction/?lat=${e.latlng["lat"]}&lon=${e.latlng["lng"]}`, (data) =>{
+            console.log(data)
+        });
     });
+
+
+
+    // fetchData("/fire", (data) => {
+    //     console.log(data.features[0])
+
+    //     // handles a special json for geodata constructed on the python backend
+    //     L.geoJSON(data, {
+    //         pointToLayer: (feature, latlng) => {
+    //             const { frp, scan = 1, track = 1 } = feature.properties;
+
+    //             const dTrack = kmToLat(track);
+    //             const dScan = kmToLon(scan, latlng.lat);
+  
+    //             const bounds = [
+    //                 [latlng.lat - dTrack, latlng.lng - dScan],
+    //                 [latlng.lat + dTrack, latlng.lng + dScan]
+    //             ];
+
+
+    //             return L.rectangle(bounds, {
+    //                 color: "black",
+    //                 weight: 1,
+    //                 fillOpacity: 0.7,
+    //                 fillColor: getColor(frp)
+    //             });
+    //         },
+    //         onEachFeature: onEachFeature
+    //     }).addTo(map);
+    // });
 
     function onEachFeature(feature, layer) {
         // does this feature have a property named popupContent?
