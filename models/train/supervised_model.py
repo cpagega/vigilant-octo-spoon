@@ -16,7 +16,7 @@ from tensorflow import keras
 
 
 # 1) Load data
-df = pd.read_csv("firms_ee_feature_join.csv")
+df = pd.read_csv("Data\\firms_ee_feature_join.csv")
 
 # Convert date
 df["date"] = pd.to_datetime(df["date"])
@@ -41,7 +41,7 @@ predictor_cols = [
 ]
 
 # 3) Target = FIRMS confidence
-target_col = "confidence"
+target_col = "label"
 
 df = df.dropna(subset=predictor_cols + [target_col])
 
@@ -66,13 +66,13 @@ model = keras.Sequential([
     keras.layers.Dense(64, activation="relu"),
     keras.layers.Dense(32, activation="relu"),
     keras.layers.Dense(16, activation="relu"),
-    keras.layers.Dense(1, activation="linear") # regression output
+    keras.layers.Dense(1, activation="sigmoid") 
 ])
 
 model.compile(
     optimizer=keras.optimizers.Adam(1e-3),
-    loss="mse",
-    metrics=["mae"]
+    loss="binary_crossentropy",
+    metrics=["accuracy"]
 )
 
 model.summary()
@@ -87,14 +87,23 @@ history = model.fit(
 )
 
 # 8) Evaluate
-y_pred = model.predict(X_test).ravel()
+y_prob = model.predict(X_test).ravel()         # probabilities in [0,1]
+y_pred = (y_prob >= 0.5).astype(int)           # convert to class labels
 
-mse = mean_squared_error(y_test, y_pred)
-r2 = r2_score(y_test, y_pred)
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 
-print("\nSupervised model results:")
-print("MSE:", mse)
-print("R^2:", r2)
+acc = accuracy_score(y_test, y_pred)
+prec = precision_score(y_test, y_pred)
+rec = recall_score(y_test, y_pred)
+f1 = f1_score(y_test, y_pred)
+auc = roc_auc_score(y_test, y_prob)
+
+print("\nSupervised model results (binary classifier):")
+print("Accuracy:", acc)
+print("Precision:", prec)
+print("Recall:", rec)
+print("F1:", f1)
+print("ROC AUC:", auc)
 
 # 9) Save model parameters
 
@@ -116,7 +125,7 @@ for layer in model.layers:
         })
 export["layers"] = weights
 
-with open("fire_supervised_regression_model.json", "w") as f:
+with open("fire_supervised_classifier_model.json", "w") as f:
     json.dump(export, f, indent=2)
 
-print("Saved supervised model to fire_supervised_regression_model.json")
+print("Saved supervised model to fire_supervised_classifier_model.json")

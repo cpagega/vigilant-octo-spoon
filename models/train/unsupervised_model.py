@@ -10,7 +10,6 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from tensorflow import keras
-from tensorflow.keras import layers
 
 import json
 
@@ -75,12 +74,12 @@ X_val = scaler.transform(X_val)
 input_dim = X_train.shape[1]
 
 inputs = keras.Input(shape=(input_dim,))
-x = layers.Dense(32, activation="relu")(inputs)
-x = layers.Dense(16, activation="relu")(x)
-bottleneck = layers.Dense(8, activation="relu", name="bottleneck")(x)
-x = layers.Dense(16, activation="relu")(bottleneck)
-x = layers.Dense(32, activation="relu")(x)
-outputs = layers.Dense(input_dim, activation="linear")(x)
+x = keras.layers.Dense(32, activation="relu")(inputs)
+x = keras.layers.Dense(16, activation="relu")(x)
+bottleneck = keras.layers.Dense(8, activation="relu", name="bottleneck")(x)
+x = keras.layers.Dense(16, activation="relu")(bottleneck)
+x = keras.layers.Dense(32, activation="relu")(x)
+outputs = keras.layers.Dense(input_dim, activation="linear")(x)
 
 autoencoder = keras.Model(inputs, outputs)
 autoencoder.compile(
