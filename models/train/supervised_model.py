@@ -107,6 +107,9 @@ print("ROC AUC:", auc)
 
 # 9) Save model parameters
 
+model.save("model.keras")
+
+
 export = {
     "features": predictor_cols,
     "scaler_mean": scaler.mean_.tolist(),

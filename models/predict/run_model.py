@@ -2,7 +2,7 @@ import tensorflow as tf
 import pandas as pd
 
 
-model = tf.keras.models.load_model("model.json")
+model = tf.keras.models.load_model("models\\predict\\model.keras")
 
 # input schema
 predictor_cols = [

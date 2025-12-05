@@ -1,16 +1,17 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from io import StringIO
 import csv, json
 from geojson import Feature, FeatureCollection, Point
 import requests
 from datetime import datetime, timezone, timedelta
 import ee
-import models.predict
+import models.predict.run_model as model
 import math
 from dotenv import load_dotenv
 import os
@@ -32,60 +33,43 @@ print(ee.String('Hello from the Earth Engine servers!').getInfo())
 app = FastAPI()
 app.mount("/index", StaticFiles(directory="static", html=True), name="static")
 
-#converts the FIRMS CSV to a GeoJSON, a format used by mapping software
-def to_geojson(csv_data):
-    features = []
-    reader = csv.DictReader(csv_data)  
-    for row in reader:
-        try: 
-            lat = float(row["latitude"])
-            lon = float(row["longitude"])
-            scan = float(row["scan"])
-            track = float(row["track"])
-            frp = float(row["frp"])
-            confidence = int(row["confidence"])  
-        except (KeyError, ValueError):
-            continue  
-        if confidence >= 50:
-            features.append(
-                Feature(
-                    geometry=Point((lon, lat)),
-                    properties={
-                        "scan": scan, 
-                        "track": track, 
-                        "frp": frp,
-                        "popupContent": f"Lat: {lat}. Lon: {lon}<br>Scan: {scan} Track: {track}<br>FRP: {frp}<br>Confidence: {confidence}"
-                    },
-                )
-            )
-    print(f"Number of points: {len(features)}")
-    return FeatureCollection(features)
-
-def reduce_at_point(img, lat, lon, scale=50000):
+# retrieves the data from the image at the specified point
+def reduce_at_point(img, lat, lon):
     geom = ee.Geometry.Point([lon, lat])
     return img.reduceRegion(
         reducer=ee.Reducer.first(),
         geometry=geom,
-        scale=scale,
+        scale=img.projection().nominalScale(),
         maxPixels=1e7,
     )
 
-def k_to_c(temp):
-    return temp - 273.15
-
+# convert wind speed and direciton into the component vectors
 def wind_to_uv(speed, deg):
     theta = math.radians(deg)
     u = -speed * math.sin(theta) # eastward component
     v = -speed * math.cos(theta) # northward component
     return u,v
 
+# None handling for EE Dictionary types
+def ee_num(val, default=0.0):
+    if val is None:
+        return default
+    return ee.Number(val).getInfo()
+
+# Current weather data from OpenWeather API
 def get_current_weather(lat,lon):
-    response = requests.get(f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&units=metric&appid={weather_key}")
-    if response.status_code == 200:
-        return response.data
-    else: 
-        return response.status_code
-    
+    try:
+        r = requests.get(
+            f"https://api.openweathermap.org/data/2.5/weather",
+            params={"lat": lat, "lon": lon, "units": "metric", "appid": weather_key},
+            timeout=5,
+        )
+        r.raise_for_status()
+        return r.json()
+    except requests.RequestException:
+        return None
+
+
 # retrieve the latest real-time mesoanalysis wind speeds - only if weather station data is unavailable
 def get_rtma(lat,lon):
     img = (ee.ImageCollection('NOAA/NWS/RTMA')
@@ -93,11 +77,120 @@ def get_rtma(lat,lon):
         .sort("system:time_start",False)
         .first()
     )
-    return reduce_at_point(img,lat,lon)
+    vals = reduce_at_point(img,lat,lon)
+    u = vals.get("UGRD")
+    v = vals.get("VGRD")
+    return ee_num(u), ee_num(v)
 
+# retrieve the latest precipitation accumulation - only if weather station data is unavailable
+def get_precip(lat,lon):
+    img = (
+            ee.ImageCollection("NOAA/CPC/Precipitation")
+            .select(['precipitation'])
+            .sort("system:time_start", False)
+            .first()
+        )
+    val = reduce_at_point(img,lat,lon)
+    precip = val.get("precipitation")
+    return ee_num(precip)
 
+# retrieve the latest drought severity index
+def get_pdsi(lat,lon):
+    img = (
+            ee.ImageCollection("GRIDMET/DROUGHT")
+            .select(['pdsi'])
+            .sort("system:time_start", False)
+            .first()
+        )
+    val = reduce_at_point(img,lat,lon)
+    pdsi = val.get("pdsi")
+    return ee_num(pdsi)
 
+# retrieve the latest max and min temperatures - only if weather station data is unavailable
+def get_cpc_temps(lat,lon):
+    img = (
+            ee.ImageCollection("NOAA/CPC/Temperature")
+            .select(['tmax','tmin'])
+            .sort("system:time_start", False)
+            .first()
+        )
+    vals = reduce_at_point(img,lat,lon)
+    tmin = vals.get("tmin")
+    tmax = vals.get("tmax")
+    return ee_num(tmin, default=None), ee_num(tmax, default=None)
 
+# retrieve the latest climate data 
+def get_cfsr_data(lat,lon):
+    img = (
+            ee.ImageCollection("NOAA/CFSR")
+            .select(['Plant_Canopy_Surface_Water_surface',
+                     'Ground_Heat_Flux_surface',
+                     'Temperature_surface',
+                     'Vegetation_surface',
+                     'Vegetation_Type_surface'
+                     ])
+            .sort("system:time_start", False)
+            .first()        
+            )
+    vals = reduce_at_point(img,lat,lon)
+    pcsws   = vals.get('Plant_Canopy_Surface_Water_surface')
+    ghfs    = vals.get('Ground_Heat_Flux_surface')
+    ts      = vals.get('Temperature_surface')
+    vs      = vals.get('Vegetation_surface')
+    vts     = vals.get('Vegetation_Type_surface')
+
+    return ee_num(pcsws), ee_num(ghfs), ee_num(ts,default=None), ee_num(vs), ee_num(vts)
+
+# retrieve and process the different data sources into a single instance to make a prediction on
+def build_prediction_set(lat,lon):
+    prediction_set = {}
+    weather_data = get_current_weather(lat,lon)
+    if weather_data is not None and "main" in weather_data:
+        main = weather_data["main"]
+        # temps from boths sources should be in C
+        if "temp_min" in main and "temp_max" in main:
+            tmin,tmax = main["temp_min"], main["temp_max"]
+        else:
+            tmin,tmax = get_cpc_temps(lat,lon)
+        if "wind" in weather_data:
+            wind = weather_data["wind"]
+            u,v = wind_to_uv(wind["speed"],wind["deg"])
+        else:
+            u,v = get_rtma(lat,lon)
+    else:
+        tmin,tmax = get_cpc_temps(lat,lon)
+        u,v = get_rtma(lat,lon)
+
+    pcsws, ghfs, ts, vs, vts = get_cfsr_data(lat,lon)
+    pdsi = get_pdsi(lat,lon)
+    precip = get_precip(lat,lon)
+
+    prediction_set["date"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    prediction_set["Ground_Heat_Flux_surface"] = ghfs
+    prediction_set["Plant_Canopy_Surface_Water_surface"] = pcsws
+    prediction_set["Temperature_surface"] = ts
+    prediction_set["Vegetation_Type_surface"] = vts
+    prediction_set["Vegetation_surface"] = vs
+    prediction_set["pdsi"] = pdsi
+    prediction_set["precipitation"] = precip
+    prediction_set["tmax"] = tmax    
+    prediction_set["tmin"] = tmin
+    prediction_set["u-component_of_wind_hybrid"] = u
+    prediction_set["v-component_of_wind_hybrid"] = v    
+
+class PredictionResponse(BaseModel):
+    prediction: float
+    status: str = "ok"
+
+#Prediction API called by client
+@app.get('/prediction', response_model=PredictionResponse)
+def make_prediction(
+    lat: float = Query(..., ge=-90, le=90, description="Latitude"),
+    lon: float = Query(..., ge=-180, le=180, description="Longitude")
+):
+    pred_set =  build_prediction_set(lat,lon)
+    result = model.make_prediction(pred_set)
+    return PredictionResponse(prediction=result)
 
 @app.get('/favicon.ico', include_in_schema=False)
 async def favicon():
