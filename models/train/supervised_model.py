@@ -9,14 +9,13 @@ import pandas as pd
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import mean_squared_error, r2_score
-import json
+import pickle
 
 from tensorflow import keras
 
 
 # 1) Load data
-df = pd.read_csv("Data\\firms_ee_feature_join.csv")
+df = pd.read_csv("Data\\firms_ee_join_clean.csv")
 
 # Convert date
 df["date"] = pd.to_datetime(df["date"])
@@ -58,6 +57,10 @@ scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
 X_test = scaler.transform(X_test)
 
+# Save the scaler
+with open("models/predict/scaler.pkl", "wb") as f:
+    pickle.dump(scaler, f)
+
 # 6) Regression neural network
 input_dim = X_train.shape[1]
 
@@ -72,7 +75,11 @@ model = keras.Sequential([
 model.compile(
     optimizer=keras.optimizers.Adam(1e-3),
     loss="binary_crossentropy",
-    metrics=["accuracy"]
+    metrics=["accuracy",
+             "AUC",
+             "Precision",
+             "Recall"
+             ]
 )
 
 model.summary()
@@ -89,6 +96,36 @@ history = model.fit(
 # 8) Evaluate
 y_prob = model.predict(X_test).ravel()         # probabilities in [0,1]
 y_pred = (y_prob >= 0.5).astype(int)           # convert to class labels
+
+print(y_prob[:10])
+
+preds = model.predict(X_test)
+print("Prediction range:", y_prob.min(), y_prob.max())
+print("Predictions > 0.5:", (y_prob > 0.5).sum())
+print("Predictions < 0.5:", (y_prob < 0.5).sum())
+
+# import matplotlib.pyplot as plt
+# plt.hist(y_prob, bins=50)
+# plt.xlabel('Predicted Probability')
+# plt.ylabel('Count')
+# plt.title('Distribution of Predictions')
+# plt.show()
+
+# print(history.history.keys())
+# print(history.history["accuracy"])
+# fire_locs = df[df['label'] == 1]
+# no_fire_locs = df[df['label'] == 0]
+
+# plt.figure(figsize=(12, 6))
+# plt.scatter(no_fire_locs['long'], no_fire_locs['lat'], 
+#             c='blue', alpha=0.1, s=1, label='No Fire')
+# plt.scatter(fire_locs['long'], fire_locs['lat'], 
+#             c='red', alpha=0.3, s=1, label='Fire')
+# plt.legend()
+# plt.title('Geographic Distribution')
+# plt.xlabel('Longitude')
+# plt.ylabel('Latitude')
+#plt.show()
 
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 
@@ -107,28 +144,6 @@ print("ROC AUC:", auc)
 
 # 9) Save model parameters
 
-model.save("model.keras")
+model.save("models/predict/model.keras")
 
 
-export = {
-    "features": predictor_cols,
-    "scaler_mean": scaler.mean_.tolist(),
-    "scaler_scale": scaler.scale_.tolist(),
-}
-
-# Save weights layer-by-layer
-weights = []
-for layer in model.layers:
-    arr = layer.get_weights()
-    if len(arr) == 2:
-        W, b = arr
-        weights.append({
-            "W": W.tolist(),
-            "b": b.tolist()
-        })
-export["layers"] = weights
-
-with open("fire_supervised_classifier_model.json", "w") as f:
-    json.dump(export, f, indent=2)
-
-print("Saved supervised model to fire_supervised_classifier_model.json")

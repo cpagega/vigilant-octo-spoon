@@ -1,7 +1,6 @@
 import tensorflow as tf
 import pandas as pd
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-
+import pickle
 
 model = tf.keras.models.load_model("models\\predict\\model.keras")
 
@@ -22,6 +21,9 @@ predictor_cols = [
     "doy"
 ]
 
+with open("models/predict/scaler.pkl", "rb") as f:
+    scaler = pickle.load(f)
+
 # map input data to schema
 def build_input_row(instance):
     df = pd.DataFrame([instance])
@@ -32,5 +34,6 @@ def build_input_row(instance):
 
 def make_prediction(instance):
     X = build_input_row(instance)
-    y_pred = model.predict(X)
+    X_scaled = scaler.transform(X)
+    y_pred = model.predict(X_scaled)
     return y_pred

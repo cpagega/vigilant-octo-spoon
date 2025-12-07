@@ -1,3 +1,1 @@
 DB_NAME = "dataset.db"
-START_DATE = "2021-06-01"
-END_DATE = "2021-10-31"

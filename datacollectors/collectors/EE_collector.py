@@ -23,6 +23,7 @@ class EECollector() :
                     .set('lat', coords.get(1)))
         self.fc = firms.map(add_lat_lon)
 
+    # Selects the image collections for each dataset we are interested in
     def _set_image_collections(self):
         """ Sets the image collection properties"""
         self.cfsr = (
@@ -50,36 +51,46 @@ class EECollector() :
             .select(['tmax','tmin'])
         )
 
-    def _get_feature_values(self,feat,dataset,hours):
+    # Gets the values from a single point in an image
+    def _get_feature_values(self, feat, dataset, hours):
         """
-            feat: existing feature collection
-            dataset: new dataset to that will be appened to feature collection
-            hours: time interval for dataset collections
-            Returns the values of the dataset for the given time interval
+            feat: existing feature
+            dataset: image collection to sample from
+            hours: interval size
+            Returns (vals_dict, slot_date)
         """
         t = ee.Date(feat.get("date"))
         millis = t.millis()
-        h = ee.Number(hours * 60 * 60 * 1000) #EE Data interval in milliseconds
-        slot_millis = millis.divide(h).round().multiply(h) # round to the nearest interval
+        h = ee.Number(hours * 60 * 60 * 1000)  # interval in ms
+        slot_millis = millis.divide(h).round().multiply(h)
         slot = ee.Date(slot_millis)
 
-        # get the first image of an interval
-        img = (dataset
-               .filterDate(slot, slot.advance(hours, "hour")) 
-               .sort("system:time_start")
-               .first())
+        # Filter collection to the interval
+        coll = (dataset
+            .filterDate(slot, slot.advance(hours, "hour"))
+            .sort("system:time_start"))
 
-        # check if the image exists and use that image if it does else use the fallback
-        img = ee.Image(img)
+        # Function that only runs if there is at least one image
+        def _compute_vals(c):
+            img = ee.Image(c.first())
+            return img.reduceRegion(
+                reducer=ee.Reducer.first(),
+                geometry=feat.geometry(),
+                scale=img.projection().nominalScale(),
+                maxPixels=1e7,
+            )
 
-        # ensures we are only getting 1 pixel for band values
-        vals = img.reduceRegion(
-            reducer=ee.Reducer.first(),
-            geometry=feat.geometry(),
-            scale=50000,
-            maxPixels=1E7,
+        # If collection is empty, return an empty dict instead of error
+        vals = ee.Dictionary(
+            ee.Algorithms.If(
+                coll.size().gt(0),
+                _compute_vals(coll),
+                ee.Dictionary({})  # no image → no values
+            )
         )
-        return vals,slot
+
+        return vals, slot
+    
     
     def _attach_cfsr(self, feat):
         vals,slot = self._get_feature_values(feat, self.cfsr, 6)
@@ -112,13 +123,41 @@ class EECollector() :
         return (feat
                 .set("cpc_temp_time", slot.format("YYYY-MM-dd'T'HH:mm:ss"))
                 .setMulti(vals))
+    
+    #Problems with EE dropping the entire column if one img was missing - trying this last ditch effort to force it
+    def ensure_pdsi(self,feat):
+        return feat.set(
+            'pdsi',
+            ee.Algorithms.If(
+                feat.propertyNames().contains('pdsi'),
+                feat.get('pdsi'),
+                -99999
+            )
+        )
+
 
     def _export_to_gdrive(self):
         """ Exports the combined feature set as a CSV to the project drive """
         task = ee.batch.Export.table.toDrive(
             collection=self.fc,
             description="firms_ee_feature_join",
-            fileFormat="CSV"
+            fileFormat="CSV",
+            selectors=[
+            'date', 'lat', 'long',
+            'gridmet_time','pdsi',
+            'cpc_temp_time', 'tmax', 'tmin',
+            'cpc_precip_time', 'precipitation',
+            'cfsr_time',
+            'Plant_Canopy_Surface_Water_surface',
+            'u-component_of_wind_hybrid', 
+            'v-component_of_wind_hybrid', 
+            'Ground_Heat_Flux_surface',
+            'Temperature_surface',
+            'Vegetation_surface',
+            'Vegetation_Type_surface',
+            'confidence','brightness','frp','label'
+            ]
+
         )
         task.start()
 
@@ -132,5 +171,7 @@ class EECollector() :
         self.fc = self.fc.map(self._attach_gridmet)
         self.fc = self.fc.map(self._attach_cpc_temp)
         self.fc = self.fc.map(self._attach_cpc_precip)
+        self.fc = self.fc.map(self.ensure_pdsi)
+        print(self.fc.limit(5).getInfo())
         print("Exporting combined data set to project drive")
         self._export_to_gdrive()

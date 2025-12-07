@@ -2,8 +2,8 @@ import ee
 import os
 from dotenv import load_dotenv
 from collectors.FIRMS_collector import FIRMSCollector
-#from collectors.EE_collector import EECollector
-from collectors.test_collector import EECollector
+from collectors.EE_collector import EECollector
+
 """
 @author: Tyler
 """
