@@ -1,5 +1,6 @@
 import tensorflow as tf
 import pandas as pd
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 
 model = tf.keras.models.load_model("models\\predict\\model.keras")

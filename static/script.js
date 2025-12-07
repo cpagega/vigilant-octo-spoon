@@ -6,59 +6,48 @@
         attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     }).addTo(map);
 
-
+    // Get API data - shows a spinner while waiting for API response
     async function fetchData(endpoint, callback) {
+        const spinner = doc.getElementById('map-spinner');
         try {
+            spinner.classList.remove('d-none'); // Show spinner
             const response = await fetch("http://localhost:8000" + endpoint);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
-            callback(data)
+            callback(data);
         } catch (e) {
             console.error("Error fetching data:", e);
+        } finally {
+            spinner.classList.add('d-none'); // Hide spinner
         }
     }
 
-
+    // Adds a marker to the map where clicked containing the prediction data
     map.on('click', (e) =>{
-        console.log(e.latlng["lat"]);
-        console.log(e.latlng["lng"]);
-        fetchData(`/prediction/?lat=${e.latlng["lat"]}&lon=${e.latlng["lng"]}`, (data) =>{
-            console.log(data)
+        fetchData(`/prediction?lat=${e.latlng["lat"]}&lon=${e.latlng["lng"]}`, (data) =>{
+        // handles a special json for geodata constructed on the python backend
+        L.geoJSON(data, {
+            pointToLayer: (feature, latlng) => {
+                const color = getColor(feature.properties.label);
+                return L.circleMarker(latlng, {
+                    radius: 8,
+                    color: "#000",
+                    weight: 1,
+                    opacity: 1,
+                    fillOpacity: 0.8,
+                    fillColor: color
+                });
+            },
+            onEachFeature: onEachFeature
+        }).addTo(map);
         });
     });
 
 
 
-    // fetchData("/fire", (data) => {
-    //     console.log(data.features[0])
-
-    //     // handles a special json for geodata constructed on the python backend
-    //     L.geoJSON(data, {
-    //         pointToLayer: (feature, latlng) => {
-    //             const { frp, scan = 1, track = 1 } = feature.properties;
-
-    //             const dTrack = kmToLat(track);
-    //             const dScan = kmToLon(scan, latlng.lat);
-  
-    //             const bounds = [
-    //                 [latlng.lat - dTrack, latlng.lng - dScan],
-    //                 [latlng.lat + dTrack, latlng.lng + dScan]
-    //             ];
-
-
-    //             return L.rectangle(bounds, {
-    //                 color: "black",
-    //                 weight: 1,
-    //                 fillOpacity: 0.7,
-    //                 fillColor: getColor(frp)
-    //             });
-    //         },
-    //         onEachFeature: onEachFeature
-    //     }).addTo(map);
-    // });
-
+    // Adds a pop up to the marker
     function onEachFeature(feature, layer) {
         // does this feature have a property named popupContent?
         if (feature.properties && feature.properties.popupContent) {
@@ -66,22 +55,13 @@
         }
     }
 
-    // frp is probably not the right color metric but using for now to build the map
-    function getColor(frp) {
-        if (frp < 100) return "#7e0404ff";   // deep dark red
-        if (frp < 300) return "#cc0000";     // strong red
-        if (frp < 600) return "#f16609ff";   // orange
-        if (frp < 900) return "#ffcc00";     // yellow-orange
-        if (frp < 1300) return "#ffff66";    // yellow-white
-        return "#cce6ff";                    // whitish blue (super hot)
+    // Sets the marker color
+    function getColor(label) {
+        switch(label) {
+            case 'low_risk': return "#00ff00";
+            case 'medium_risk': return "#ff8800ff";
+            case 'high_risk': return "#ff0000";
+        }
     }
-
-    // convert scan and track from km to degrees
-    const kmToLat = km => km / 110.574;
-    const kmToLon = (km, lat) => km / (111.320 * Math.cos(lat * Math.PI / 180));
-
-  //  map.addEventListener('zoomend', (e) => {
-  //      console.log(e);
-  // });
 
 })(window, document);

@@ -138,7 +138,7 @@ class FIRMSCollector(TableCollector) :
     # Called by collector_main, runs the methods necessary to create a sample table of training data
     def collect_data(self):
         print(f"Processing FIRMS data...")
-        with open("Data\\fire_archive_M-C61_683824.csv", newline="") as f:
+        with open("Data\\fire_archive_modis_2019_2020.csv", newline="") as f:
             reader = csv.DictReader(f)
             self._commit_csv_to_db(reader)
         self._create_sample_table()

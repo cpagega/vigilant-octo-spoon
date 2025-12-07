@@ -23,7 +23,7 @@ df["date"] = pd.to_datetime(df["date"])
 df["month"] = df["date"].dt.month
 df["doy"] = df["date"].dt.dayofyear
 
-# 2) Predictor columns (same as before)
+# 2) Predictor columns
 predictor_cols = [
     "Ground_Heat_Flux_surface",
     "Plant_Canopy_Surface_Water_surface",

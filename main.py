@@ -145,6 +145,8 @@ def get_cfsr_data(lat,lon):
 def build_prediction_set(lat,lon):
     prediction_set = {}
     weather_data = get_current_weather(lat,lon)
+    print("Weather API Response")
+    print(weather_data)
     if weather_data is not None and "main" in weather_data:
         main = weather_data["main"]
         # temps from boths sources should be in C
@@ -176,28 +178,64 @@ def build_prediction_set(lat,lon):
     prediction_set["tmax"] = tmax    
     prediction_set["tmin"] = tmin
     prediction_set["u-component_of_wind_hybrid"] = u
-    prediction_set["v-component_of_wind_hybrid"] = v    
+    prediction_set["v-component_of_wind_hybrid"] = v  
     return prediction_set
 
-class PredictionResponse(BaseModel):
-    prediction: float
-    status: str = "ok"
 
 #Prediction API called by client
-@app.get('/prediction', response_model=PredictionResponse)
+@app.get('/prediction')
 def make_prediction(
     lat: float = Query(..., ge=-90, le=90, description="Latitude"),
     lon: float = Query(..., ge=-180, le=180, description="Longitude")
 ):
+    
     pred_set =  build_prediction_set(lat,lon)
+    print("Completed prediction set")  
     print(pred_set)
     result = model.make_prediction(pred_set)
-    return PredictionResponse(prediction=result)
+    print(result)
+    if result <= 0.25:
+        label = "low_risk"
+    elif result > 0.25 and result <= 0.75:
+        label = "medium_risk"
+    else:
+        label = "high_risk"
 
+    # Build feature for GeoJSON
+
+    y_pred = float(result[0][0])
+    timestamp = datetime.now().isoformat()
+
+    feature = {
+        "type": "Feature",
+        "geometry": {
+            "type": "Point",
+            "coordinates": [lon,lat],
+        },
+        "properties":{
+            "lat": lat,
+            "lon": lon,
+            "label": label,
+            "model_description": "Supvervised fire risk classifier",
+            "popupContent":(
+                f"Datetime: {timestamp}<br>"
+                f"Lat: {lat:.4f}, Lon: {lon:.4f}<br>"
+                f"Predicted fire risk: {y_pred:.3f} ({label})<br>"
+            )
+        }
+    }
+
+    geojson = {
+        "type": "FeatureCollection",
+        "features": [feature],
+    }
+
+    return geojson
+ 
 @app.get('/favicon.ico', include_in_schema=False)
 async def favicon():
     return FileResponse('favicon.ico')
 
 
 
-
+ 

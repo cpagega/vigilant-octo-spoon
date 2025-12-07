@@ -1,12 +1,23 @@
-#header {
-    border : solid;
-    margin-bottom: 25px;
+#map {
+    height: 600px;
+    width: 100%;
+    position: relative;
 }
 
-#map {
-    
-    border: solid;
-    height: 50vh;
-    width: 50%;
-    margin: 0 auto;
+#map-spinner {
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card-img-top {
+    height: 200px;
+    object-fit: cover;
 }

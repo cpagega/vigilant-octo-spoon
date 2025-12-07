@@ -2,8 +2,8 @@ import ee
 import os
 from dotenv import load_dotenv
 from collectors.FIRMS_collector import FIRMSCollector
-from collectors.EE_collector import EECollector
-
+#from collectors.EE_collector import EECollector
+from collectors.test_collector import EECollector
 """
 @author: Tyler
 """
@@ -23,6 +23,8 @@ class Collector():
     def collect_EE(self):
         cfc = EECollector(self.project_id)
         cfc.collect_data()
+
+
 2
 
 if (__name__ == "__main__"):
