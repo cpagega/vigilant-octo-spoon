@@ -9,6 +9,9 @@ import pandas as pd
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
+import numpy as np
 import pickle
 
 from tensorflow import keras
@@ -104,28 +107,47 @@ print("Prediction range:", y_prob.min(), y_prob.max())
 print("Predictions > 0.5:", (y_prob > 0.5).sum())
 print("Predictions < 0.5:", (y_prob < 0.5).sum())
 
-# import matplotlib.pyplot as plt
-# plt.hist(y_prob, bins=50)
-# plt.xlabel('Predicted Probability')
-# plt.ylabel('Count')
-# plt.title('Distribution of Predictions')
-# plt.show()
 
-# print(history.history.keys())
-# print(history.history["accuracy"])
-# fire_locs = df[df['label'] == 1]
-# no_fire_locs = df[df['label'] == 0]
+print(history.history.keys())
 
-# plt.figure(figsize=(12, 6))
-# plt.scatter(no_fire_locs['long'], no_fire_locs['lat'], 
-#             c='blue', alpha=0.1, s=1, label='No Fire')
-# plt.scatter(fire_locs['long'], fire_locs['lat'], 
-#             c='red', alpha=0.3, s=1, label='Fire')
-# plt.legend()
-# plt.title('Geographic Distribution')
-# plt.xlabel('Longitude')
-# plt.ylabel('Latitude')
-#plt.show()
+# ---- 1. Loss ----
+plt.figure()
+plt.plot(history.history["loss"], label="Train Loss")
+plt.plot(history.history["val_loss"], label="Val Loss")
+plt.xlabel("Epoch")
+plt.ylabel("Binary Crossentropy")
+plt.title("Training vs Validation Loss")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.savefig("plot_loss.png", dpi=150)
+
+
+# ---- 2. Accuracy ----
+plt.figure()
+plt.plot(history.history["accuracy"], label="Train Accuracy")
+plt.plot(history.history["val_accuracy"], label="Val Accuracy")
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.title("Training vs Validation Accuracy")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.savefig("plot_accuracy.png", dpi=150)
+
+
+# ---- 3. AUC ----
+plt.figure()
+plt.plot(history.history["AUC"], label="Train AUC")
+plt.plot(history.history["val_AUC"], label="Val AUC")
+plt.xlabel("Epoch")
+plt.ylabel("ROC AUC")
+plt.title("Training vs Validation AUC")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.savefig("plot_auc.png", dpi=150)
+
 
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 

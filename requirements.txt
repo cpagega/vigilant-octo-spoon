@@ -1,0 +1,11 @@
+earthengine-api
+python-dotenv
+pandas
+numpy
+tensorflow
+scikit-learn
+matplotlib
+fastapi
+geojson
+requests
+pydantic
