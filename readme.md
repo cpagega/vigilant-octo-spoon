@@ -130,6 +130,3 @@ http://localhost:8000/
 
 The project is now ready for use.
 
----
-
-If you want architecture diagrams, API usage examples, or troubleshooting included, let me know.
