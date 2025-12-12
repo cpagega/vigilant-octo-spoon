@@ -229,16 +229,17 @@ def make_prediction(
     }
 
     return geojson
- 
+
+# Favicon
 @app.get('/favicon.ico', include_in_schema=False)
 async def favicon():
     return FileResponse('favicon.ico')
-
+# Plot images
 @app.get("/metrics/{metric_name}")
 def get_metric_plot(metric_name: str):
     image_path = plot_metric(metric_name.split('.')[0])
     return FileResponse(image_path, media_type="image/png")
-
+# Main page
 @app.get("/")
 def index():
     return FileResponse("static/index.html")

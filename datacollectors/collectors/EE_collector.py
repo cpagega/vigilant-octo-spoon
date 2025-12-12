@@ -172,6 +172,7 @@ class EECollector() :
         self.fc = self.fc.map(self._attach_cpc_temp)
         self.fc = self.fc.map(self._attach_cpc_precip)
         self.fc = self.fc.map(self.ensure_pdsi)
+        #console out the first 5 joins to verify correctness
         print(self.fc.limit(5).getInfo())
         print("Exporting combined data set to project drive")
         self._export_to_gdrive()

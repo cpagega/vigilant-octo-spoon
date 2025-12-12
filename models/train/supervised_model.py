@@ -101,54 +101,7 @@ history = model.fit(
 # 8) Evaluate
 y_prob = model.predict(X_test).ravel()         # probabilities in [0,1]
 y_pred = (y_prob >= 0.5).astype(int)           # convert to class labels
-
-print(y_prob[:10])
-
 preds = model.predict(X_test)
-print("Prediction range:", y_prob.min(), y_prob.max())
-print("Predictions > 0.5:", (y_prob > 0.5).sum())
-print("Predictions < 0.5:", (y_prob < 0.5).sum())
-
-
-print(history.history.keys())
-
-# ---- 1. Loss ----
-plt.figure()
-plt.plot(history.history["loss"], label="Train Loss")
-plt.plot(history.history["val_loss"], label="Val Loss")
-plt.xlabel("Epoch")
-plt.ylabel("Binary Crossentropy")
-plt.title("Training vs Validation Loss")
-plt.legend()
-plt.grid(True)
-plt.tight_layout()
-plt.savefig("static/metrics/plot_loss.png", dpi=150)
-
-
-# ---- 2. Accuracy ----
-plt.figure()
-plt.plot(history.history["accuracy"], label="Train Accuracy")
-plt.plot(history.history["val_accuracy"], label="Val Accuracy")
-plt.xlabel("Epoch")
-plt.ylabel("Accuracy")
-plt.title("Training vs Validation Accuracy")
-plt.legend()
-plt.grid(True)
-plt.tight_layout()
-plt.savefig("static/metrics/plot_accuracy.png", dpi=150)
-
-
-# ---- 3. AUC ----
-plt.figure()
-plt.plot(history.history["AUC"], label="Train AUC")
-plt.plot(history.history["val_AUC"], label="Val AUC")
-plt.xlabel("Epoch")
-plt.ylabel("ROC AUC")
-plt.title("Training vs Validation AUC")
-plt.legend()
-plt.grid(True)
-plt.tight_layout()
-plt.savefig("static/metrics/plot_auc.png", dpi=150)
 
 # This saves "history.history" to "history.json"
 history_out = {

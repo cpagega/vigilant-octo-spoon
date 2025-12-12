@@ -8,6 +8,7 @@ import numpy as np
 import math
 import threading
 import os, uuid
+
 """
 Author: Ben
 """
@@ -21,9 +22,9 @@ METRICS_DIR = BASE_DIR / "static" / "metrics"
 HISTORY_PATH = TRAIN_DIR / "history.json"
 CONFUSION_PATH = TRAIN_DIR / "confusion_matrix.json"
 
+
+# Thread locks required to correctly generate plots when called by the webserver main thread
 _plot_lock = threading.Lock()
-
-
 def _save_atomic(fig, out_path: Path) -> None:
     tmp = out_path.with_suffix(out_path.suffix + f'.{uuid.uuid4().hex}{out_path.suffix}')
     fig.savefig(tmp, dpi=120, bbox_inches="tight")
