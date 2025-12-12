@@ -21,6 +21,7 @@ predictor_cols = [
     "doy"
 ]
 
+# load the saved scaler from training
 with open("models/predict/scaler.pkl", "rb") as f:
     scaler = pickle.load(f)
 
@@ -32,6 +33,7 @@ def build_input_row(instance):
     df["doy"] = df["date"].dt.dayofyear
     return df[predictor_cols]
 
+# scale the input and make the prediction
 def make_prediction(instance):
     X = build_input_row(instance)
     X_scaled = scaler.transform(X)

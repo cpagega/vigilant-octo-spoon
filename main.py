@@ -4,14 +4,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from io import StringIO
-import csv, json
-from geojson import Feature, FeatureCollection, Point
 import requests
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 import ee
 import models.predict.run_model as model
+from models.metrics import plot_metric
 import math
 from dotenv import load_dotenv
 import os
@@ -32,6 +29,7 @@ print(ee.String('Hello from the Earth Engine servers!').getInfo())
 
 app = FastAPI()
 app.mount("/index", StaticFiles(directory="static", html=True), name="static")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # retrieves the data from the image at the specified point
 def reduce_at_point(img, lat, lon):
@@ -47,17 +45,17 @@ def reduce_at_point(img, lat, lon):
 def wind_to_uv(speed, deg):
     theta = math.radians(deg)
     u = -speed * math.sin(theta) # eastward component
-    v = -speed * math.cos(theta) # northward component 
+    v = -speed * math.cos(theta) # northward component
     return u,v
 
 # None handling for EE Dictionary types
 def ee_num(val, default=0.0):
-    if val is None: 
-        return default 
+    if val is None:
+        return default
     return ee.Number(val).getInfo()
 
 # Current weather data from OpenWeather API
-def get_current_weather(lat,lon): 
+def get_current_weather(lat,lon):
     try:
         r = requests.get(
             f"https://api.openweathermap.org/data/2.5/weather",
@@ -185,15 +183,15 @@ def build_prediction_set(lat,lon):
 #Prediction API called by client
 @app.get('/prediction')
 def make_prediction(
-    lat: float = Query(..., ge=24.5, le=49.5, description="Latitude"),
-    lon: float = Query(..., ge=-125, le=-66.5, description="Longitude")
+    lat: float = Query(..., ge=-90, le=90, description="Latitude"),
+    lon: float = Query(..., ge=-180, le=180, description="Longitude")
 ):
     
     pred_set =  build_prediction_set(lat,lon)
     print("Completed prediction set")  
     print(pred_set)
     result = model.make_prediction(pred_set)
-    print("Prediction: ",result)
+    print(result)
     if result <= 0.25:
         label = "low_risk"
     elif result > 0.25 and result <= 0.75:
@@ -222,7 +220,7 @@ def make_prediction(
                 f"Lat: {lat:.4f}, Lon: {lon:.4f}<br>"
                 f"Predicted fire risk: {y_pred:.3f} ({label})<br>"
             )
-        } 
+        }
     }
 
     geojson = {
@@ -231,26 +229,17 @@ def make_prediction(
     }
 
     return geojson
-
-
-#Send images to webpage
  
 @app.get('/favicon.ico', include_in_schema=False)
 async def favicon():
     return FileResponse('favicon.ico')
 
-@app.get('/plot_accuracy.png', include_in_schema=False)
-async def plot_accuracy(): 
-    return FileResponse('plot_accuracy.png')
+@app.get("/metrics/{metric_name}")
+def get_metric_plot(metric_name: str):
+    image_path = plot_metric(metric_name.split('.')[0])
+    return FileResponse(image_path, media_type="image/png")
 
-@app.get('/plot_auc.png', include_in_schema=False)
-async def plot_auc():
-    return FileResponse('plot_auc.png')
+@app.get("/")
+def index():
+    return FileResponse("static/index.html")
 
-@app.get('/plot_loss.png', include_in_schema=False)
-async def plot_loss():
-    return FileResponse('plot_loss.png')
-
-@app.get('/confusion_matrix.png', include_in_schema=False)
-async def confusion_matrix():
-    return FileResponse('confusion_matrix.png') 

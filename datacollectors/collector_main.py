@@ -25,8 +25,6 @@ class Collector():
         cfc.collect_data()
 
 
-2
-
 if (__name__ == "__main__"):
     collector = Collector()
     functions = [collector.collect_FIRMS, collector.collect_EE]

@@ -13,6 +13,8 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
+import json
+from pathlib import Path
 
 from tensorflow import keras
 
@@ -120,7 +122,7 @@ plt.title("Training vs Validation Loss")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
-plt.savefig("plot_loss.png", dpi=150)
+plt.savefig("static/metrics/plot_loss.png", dpi=150)
 
 
 # ---- 2. Accuracy ----
@@ -133,7 +135,7 @@ plt.title("Training vs Validation Accuracy")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
-plt.savefig("plot_accuracy.png", dpi=150)
+plt.savefig("static/metrics/plot_accuracy.png", dpi=150)
 
 
 # ---- 3. AUC ----
@@ -146,8 +148,27 @@ plt.title("Training vs Validation AUC")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
-plt.savefig("plot_auc.png", dpi=150)
+plt.savefig("static/metrics/plot_auc.png", dpi=150)
 
+# This saves "history.history" to "history.json"
+history_out = {
+    k: [float(v) for v in vals] # make sure everything is JSON-serializable
+    for k, vals in history.history.items()
+}
+
+with open("models/train/history.json", "w") as f:
+    json.dump(history_out, f, indent=2)
+
+# print("Saved training history to", ("history.json").resolve())
+
+# Then it saves the confusion matrix values to "confusion_matrix.json"
+cm = confusion_matrix(y_test, y_pred)
+cm_list = cm.tolist()
+
+with open("models/train/confusion_matrix.json", "w") as f:
+    json.dump(cm_list, f, indent=2)
+
+# print("Saved confusion matrix to", ("confusion_matrix.json").resolve())
 
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 
